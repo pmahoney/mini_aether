@@ -28,22 +28,24 @@ end
 if Version.current.prerelease?
   orig_version = gemspec.version
   release_version = Version.current.bump!
+  @gemspec = nil
   gemspec.version = release_version
   begin
+    _gemspec = gemspec.dup
     namespace :release do
-      pkg = Gem::PackageTask.new(gemspec) do |p|
+      pkg = Gem::PackageTask.new(_gemspec) do |p|
         p.need_tar = true
-        p.gem_spec = gemspec
+        p.gem_spec = _gemspec
       end
 
-      task :push => :gem do
-        gem_file = File.basename gemspec.cache_file
+      task :push => 'release:gem' do
+        gem_file = File.basename _gemspec.cache_file
         gem_path = File.join pkg.package_dir, gem_file
         Gem::GemRunner.new.run(['push', gem_path])
       end
     end
   ensure
-    gemspec.version = orig_version
+    @gemspec = nil
   end
   
   desc "Release version #{release_version} and push to rubygems.org"
