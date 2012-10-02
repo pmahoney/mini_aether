@@ -14,7 +14,8 @@ tool.
 
 I feel that JRuby/maven/rubygems integration is lacking in many areas.
 There are various attempts to improve this.  See
-[JBunder](https://github.com/mkristian/jbundler) for example.  So I'm
+[JBundler](https://github.com/mkristian/jbundler) and
+[LockJar](https://github.com/mguymon/lock_jar) for example.  So I'm
 not sure what role MiniAether will play, if any.
 
     require 'mini_aether'
@@ -23,16 +24,11 @@ not sure what role MiniAether will play, if any.
       group 'org.sonatype.aether' do
         version '1.13.1' do
           jar 'aether-api'
-          jar 'aether-connector-asynchttpclient'
-          jar 'aether-connector-file'
           jar 'aether-impl'
-          jar 'aether-spi'
-          jar 'aether-util'
         end
       end
 
       jar 'com.ning:async-http-client:1.6.5'
-      jar 'org.jboss.netty:netty:3.2.5.Final'
 
       # alternate syntax
       dep(:group_id => 'org.slf4j',
@@ -40,18 +36,7 @@ not sure what role MiniAether will play, if any.
           :version => '1.6.2',
           :extension => 'jar')  # 'jar' is the default if none is given
 
-      group 'org.apache.maven' do
-        version '3.0.4' do
-          jar 'maven-aether-provider'
-          jar 'maven-model'
-          jar 'maven-model-builder'
-          jar 'maven-repository-metadata'
-        end
-      end
-
       group 'org.codehaus.plexus' do
-        jar 'plexus-interpolation:1.14'
-        jar 'plexus-component-annotations:1.5.5'
         jar 'plexus-utils:2.0.6'
       end
     end
