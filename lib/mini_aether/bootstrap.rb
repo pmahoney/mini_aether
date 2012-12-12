@@ -35,7 +35,7 @@ module MiniAether
           jar 'ch.qos.logback:logback-core:1.0.6'
           jar 'ch.qos.logback:logback-classic:1.0.6'
           # add dir to classpath since it contains logback.xml
-          $CLASSPATH << File.dirname(__FILE__)
+          $CLASSPATH << File.expand_path(File.dirname(__FILE__))
         end
 
         group 'org.apache.maven' do
