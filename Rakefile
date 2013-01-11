@@ -22,7 +22,7 @@ Gem::PackageTask.new(gemspec) do |p|
 end
 
 Rake::VersionTask.new do |t|
-  t.with_git_tag = true
+  t.with_git_tag = false
 end
 
 if Version.current.prerelease?
