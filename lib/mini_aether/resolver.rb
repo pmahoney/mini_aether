@@ -6,12 +6,14 @@
 
 require 'mini_aether'
 require 'mini_aether/bootstrap'
+require 'mini_aether/helper'
 
-MiniAether.extend(MiniAether::Bootstrap)
-MiniAether.bootstrap!
+MiniAether::Bootstrap.bootstrap!
 
 module MiniAether
   class Resolver
+    include Helper
+
     RepositorySystem =
       Java::OrgSonatypeAether::RepositorySystem
 
@@ -64,7 +66,7 @@ module MiniAether
       @logger = Java::OrgSlf4j::LoggerFactory.getLogger(self.class.to_s)
       @system = LOCATOR.getService(RepositorySystem.java_class)
       @session = MavenRepositorySystemSession.new
-      local_repo = LocalRepository.new(MiniAether.local_repository_path)
+      local_repo = LocalRepository.new(local_repository_path)
       local_manager = @system.newLocalRepositoryManager(local_repo)
       @session.setLocalRepositoryManager(local_manager)
     end
@@ -98,19 +100,23 @@ module MiniAether
     #
     # @return [Java::JavaUtil::List<Java::JavaIo::File>]
     def resolve(dep_hashes, repos)
-      @logger.info 'resolving dependencies ({})', dep_hashes.size
+      @logger.info 'resolving dependencies'
       collect_req = CollectRequest.new
 
       dep_hashes.each do |hash|
         dep = Dependency.new new_artifact(hash), 'compile'
         collect_req.addDependency dep
-        @logger.info 'requested {}', dep
+        @logger.debug 'requested {}', dep
       end
 
       repos.each do |uri|
         repo = RemoteRepository.new(uri.object_id.to_s, 'default', uri)
         collect_req.addRepository repo
-        @logger.info 'added repository {}', repo
+        @logger.info 'added repository {}', repo.getUrl
+        enabled = []
+        enabled << 'releases' if repo.getPolicy(false).isEnabled
+        enabled << 'snapshots' if repo.getPolicy(true).isEnabled
+        @logger.debug '{}', enabled.join('+')
       end
 
       node = @system.collectDependencies(@session, collect_req).getRoot
@@ -120,9 +126,6 @@ module MiniAether
       
       nlg = PreorderNodeListGenerator.new
       node.accept nlg
-      files = nlg.getFiles
-
-      @logger.info "resolved with #{files.size} artifacts"
 
       if @logger.isDebugEnabled
         total_size = 0
@@ -131,12 +134,17 @@ module MiniAether
           size = File.stat(artifact.file.absolute_path).size
           total_size += size
           
-          @logger.debug("%0.2fMiB %s (%s)" % [size/MiB_PER_BYTE, artifact, file.name])
+          @logger.debug("Using %0.2f %s" % [size/MiB_PER_BYTE, artifact])
         end
-        @logger.debug("%0.3f MiB total" % [total_size/MiB_PER_BYTE])
+        @logger.debug('      -----')
+        @logger.debug("      %0.2f MiB total" % [total_size/MiB_PER_BYTE])
+      else
+        nlg.getArtifacts(false).each do |artifact|
+          @logger.info 'Using {}', artifact
+        end
       end
 
-      files
+      nlg.getFiles
     end
   end
 end

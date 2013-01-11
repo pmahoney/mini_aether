@@ -1,4 +1,5 @@
 require 'java'
+require 'logger'
 require 'mini_aether/spec'
 
 module MiniAether
@@ -6,7 +7,45 @@ module MiniAether
 
   M2_SETTINGS = File.join(ENV['HOME'], '.m2', 'settings.xml').freeze
 
+  class LoggerConfig
+    attr_reader :level
+
+    def initialize
+      @level = 'INFO'
+    end
+
+    def level=(level)
+      @level = case level
+               when Symbol, String
+                 level.to_s.upcase
+               when Logger::FATAL, Logger::ERROR
+                 'ERROR'
+               when Logger::WARN
+                 'WARN'
+               when Logger::INFO
+                 'INFO'
+               when Logger::DEBUG
+                 'DEBUG'
+               else
+                 'INFO'
+               end
+    end
+
+    def info?
+      case @level
+      when 'INFO', 'DEBUG'
+        true
+      else
+        false
+      end
+    end
+  end
+
   class << self
+    def logger
+      @logger ||= LoggerConfig.new
+    end
+
     # Create a new ScriptingContainer (Java object interface to a
     # JRuby runtime) in SINGLETHREAD mode, and yield it to the block.
     # Ensure the runtime is terminated after the block returns.

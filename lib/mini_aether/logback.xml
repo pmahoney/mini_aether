@@ -1,11 +1,12 @@
 <configuration>
+  <contextName>mini_aether</contextName>
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
     <encoder>
-      <pattern>%d{HH:mm:ss} %-5level %logger{36} - %msg%n</pattern>
+      <pattern>[%contextName] %-5level %msg%n</pattern>
     </encoder>
   </appender>
   <logger name="com.ning" level="WARN"/>
-  <root level="INFO">
+  <root level="${level}">
     <appender-ref ref="STDOUT" />
   </root>
 </configuration>
