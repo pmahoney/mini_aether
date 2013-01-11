@@ -10,9 +10,15 @@ module MiniAether
   module Bootstrap
     System = Java::JavaLang::System
 
-    # Pre-resolved dependencies of mini_aether.
+    # Pre-resolved dependencies of mini_aether.  This list includes a
+    # set of dependencies and all transient dependencies.
     def dependencies
-      spec = Spec.new do
+      mini_aether_spec.dependencies
+    end
+
+    # @return [MiniAether::Spec] the dependencies of mini_aether itself
+    def mini_aether_spec
+      Spec.new do
         group 'org.sonatype.aether' do
           version '1.13.1' do
             jar 'aether-api'
@@ -53,8 +59,6 @@ module MiniAether
           jar 'plexus-utils:2.0.6'
         end
       end
-
-      spec.dependencies
     end
 
     # Interpolate variables like +${user.home}+ and +${env.HOME}+ from
@@ -156,6 +160,12 @@ module MiniAether
       puts
     end
 
+    # Build a m2 repository path fragment for +dep+.  For example,
+    # coordinates of +com.example:project:1.0.1+ would result in
+    # +com/example/project/1.0.1/project-1.0.1.jar+.
+    #
+    # @param [Hash] dep a hash with keys +:group_id+, +:artifact_id+, and +:version+
+    # @return [String] a path fragment to this artifact in m2 repository format
     def jar_path(dep)
       group_id = dep[:group_id]
       group_path = group_id.gsub('.', '/')
