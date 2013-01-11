@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
   s.author = 'Patrick Mahoney'
   s.email = 'pat@polycrystal.org'
   s.homepage = 'https://github.com/pmahoney/mini_aether'
-  s.files = Dir['lib/**/*.rb', 'test/**/*.rb', 'test/data/*.gemspec']
+  s.files = Dir['lib/**/*.rb', 'lib/**/*.xml', 'test/**/*.rb', 'test/data/*.gemspec']
 
   s.add_development_dependency 'minitest'
   s.add_development_dependency 'rake'
