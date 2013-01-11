@@ -14,6 +14,9 @@ module MiniAether
       scope = Java::OrgJrubyEmbed::LocalContextScope::SINGLETHREAD
       c = Java::OrgJrubyEmbed::ScriptingContainer.new(scope)
       begin
+        # short-lived container of mostly java calls may be a bit
+        # faster without spending time to JIT
+        c.setCompileMode Java::OrgJruby::RubyInstanceConfig::CompileMode::OFF
         yield c
       ensure
         c.terminate
