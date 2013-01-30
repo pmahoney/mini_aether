@@ -3,7 +3,6 @@ require 'mini_aether/spec'
 require 'mini_aether/xml_parser'
 require 'fileutils'
 require 'net/http'
-require 'strscan'
 require 'tmpdir'
 require 'uri'
 

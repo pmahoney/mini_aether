@@ -1,3 +1,5 @@
+require 'strscan'
+
 module MiniAether
   module Helper
     System = Java::JavaLang::System
