@@ -1,43 +1,43 @@
-require 'mini_aether/helper'
-require 'mini_aether/spec'
-require 'mini_aether/xml_parser'
 require 'fileutils'
 require 'net/http'
 require 'tmpdir'
 require 'uri'
 
+require 'mini_aether/config'
+require 'mini_aether/helper'
+require 'mini_aether/spec'
+require 'mini_aether/xml_parser'
+
 module MiniAether
   module Bootstrap
     class << self
-      # Load the required jar files, downloading them if necessary.
-      #
-      # Ignores any maven config regarding repositories and attempts a
-      # direct download from repo1.maven.org using Net::HTTP.
+      include Helper
+
       def bootstrap!
         logback = false
+        root = local_repository_path
         dependencies.each do |dep|
-          require ensure_dependency(dep)
+          # means slf4j backend was not found, and we should initialize logback
           if dep[:artifact_id] == 'logback-classic'
             logback = true
           end
+          jar = ensure_dependency(dep, root)
+          require jar
         end
-        initialize_logger if logback
+
+        initialize_logback if logback
       end
 
-      private
-
-      include Helper
-
-      def initialize_logger
+      def initialize_logback
         file = File.expand_path('../logback.xml', __FILE__)
         context = Java::OrgSlf4j::LoggerFactory.getILoggerFactory
         begin
           configurator = Java::ChQosLogbackClassicJoran::JoranConfigurator.new
-          configurator.setContext(context)
+          configurator.setContext context
           context.reset
           context.putProperty("level", MiniAether.logger.level)
           configurator.doConfigure(file)
-        rescue Java::ChQosLogbackCoreJoranSpi::JoranException
+        rescue Java::ChQosJoranException.java_class
           # StatusPrinter will handle this
         end
         Java::ChQosLogbackCoreUtil::StatusPrinter.printInCaseOfErrorsOrWarnings context
@@ -49,6 +49,9 @@ module MiniAether
         mini_aether_spec.dependencies
       end
 
+      # Pre-resolved (dependencies including all transients) spec of
+      # the (bootsrap) dependencies of mini_aether itself.
+      #
       # @return [MiniAether::Spec] the dependencies of mini_aether itself
       def mini_aether_spec
         Spec.new do
@@ -92,9 +95,25 @@ module MiniAether
         end
       end
 
-      def ensure_dependency(dep)
+      # Build a m2 repository path fragment for +dep+.  For example,
+      # coordinates of +com.example:project:1.0.1+ would result in
+      # +com/example/project/1.0.1/project-1.0.1.jar+.
+      #
+      # @param [Hash] dep a hash with keys +:group_id+, +:artifact_id+, and +:version+
+      # @return [String] a path fragment to this artifact in m2 repository format
+      def jar_path(dep)
+        group_id = dep[:group_id]
+        group_path = group_id.gsub('.', '/')
+        artifact_id = dep[:artifact_id]
+        version = dep[:version]
+
+        file_name = "#{artifact_id}-#{version}.jar"
+        "#{group_path}/#{artifact_id}/#{version}/#{file_name}"
+      end
+
+      def ensure_dependency(dep, root)
         path = jar_path(dep)
-        local_file = File.join(local_repository_path, path)
+        local_file = File.join(root, path)
         install(path, local_file) unless File.exists?(local_file)
         local_file
       end

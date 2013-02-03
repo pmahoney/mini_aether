@@ -1,4 +1,4 @@
-require 'mini_aether'
+require 'mini_aether/config'
 
 module MiniAether
   # A DSL to define and resolve dependencies.  The Maven central
@@ -49,7 +49,7 @@ module MiniAether
       @dependencies = []
 
       if block_given?
-        instance_eval &block
+        instance_eval(&block)
       end
     end
 
@@ -105,21 +105,6 @@ module MiniAether
       else
         raise ArgumentError, "don't understand '#{coords}'"
       end
-    end
-
-    # Resolve the dependencies using +MiniAether.resolve+.
-    #
-    # @return [Array<String>] an array of paths to artifact files
-    # (likely jar files) satisfying the dependencies
-    def resolve
-      MiniAether.resolve(dependencies, sources)
-    end
-
-    # Resolve the dependencies using +MiniAether.resolve+ and then
-    # require each of them (assumes each is a JAR file that may be
-    # required into JRuby).
-    def require
-      resolve.each { |jar| Kernel.require jar }
     end
   end
 end

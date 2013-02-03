@@ -2,6 +2,8 @@ require 'strscan'
 
 module MiniAether
   module Helper
+    M2_SETTINGS = File.join(ENV['HOME'], '.m2', 'settings.xml').freeze
+
     System = Java::JavaLang::System
 
     def local_repository_path
@@ -48,22 +50,6 @@ module MiniAether
       ret << s.rest
       
       ret
-    end
-
-    # Build a m2 repository path fragment for +dep+.  For example,
-    # coordinates of +com.example:project:1.0.1+ would result in
-    # +com/example/project/1.0.1/project-1.0.1.jar+.
-    #
-    # @param [Hash] dep a hash with keys +:group_id+, +:artifact_id+, and +:version+
-    # @return [String] a path fragment to this artifact in m2 repository format
-    def jar_path(dep)
-      group_id = dep[:group_id]
-      group_path = group_id.gsub('.', '/')
-      artifact_id = dep[:artifact_id]
-      version = dep[:version]
-
-      file_name = "#{artifact_id}-#{version}.jar"
-      "#{group_path}/#{artifact_id}/#{version}/#{file_name}"
     end
   end
 end

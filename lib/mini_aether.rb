@@ -1,70 +1,15 @@
 require 'java'
 require 'logger'
+
+require 'mini_aether/config'
+require 'mini_aether/resolver'
 require 'mini_aether/spec'
 
 module MiniAether
-  MAVEN_CENTRAL_REPO = 'http://repo1.maven.org/maven2'.freeze
-
-  M2_SETTINGS = File.join(ENV['HOME'], '.m2', 'settings.xml').freeze
-
-  class LoggerConfig
-    attr_reader :level
-
-    def initialize
-      @level = 'INFO'
-    end
-
-    def level=(level)
-      @level = case level
-               when Symbol, String
-                 level.to_s.upcase
-               when Logger::FATAL, Logger::ERROR
-                 'ERROR'
-               when Logger::WARN
-                 'WARN'
-               when Logger::INFO
-                 'INFO'
-               when Logger::DEBUG
-                 'DEBUG'
-               else
-                 'INFO'
-               end
-    end
-
-    def info?
-      case @level
-      when 'INFO', 'DEBUG'
-        true
-      else
-        false
-      end
-    end
-  end
-
   class << self
-    def logger
-      @logger ||= LoggerConfig.new
-    end
-
-    # Create a new ScriptingContainer (Java object interface to a
-    # JRuby runtime) in SINGLETHREAD mode, and yield it to the block.
-    # Ensure the runtime is terminated after the block returns.
-    def with_ruby_container
-      scope = Java::OrgJrubyEmbed::LocalContextScope::SINGLETHREAD
-      c = Java::OrgJrubyEmbed::ScriptingContainer.new(scope)
-      begin
-        # short-lived container of mostly java calls may be a bit
-        # faster without spending time to JIT
-        c.setCompileMode Java::OrgJruby::RubyInstanceConfig::CompileMode::OFF
-        yield c
-      ensure
-        c.terminate
-      end
-    end
-
     # Resolve +dependencies+, downloading from +sources+.
     #
-    # Uses a separate JRuby runtime to avoid polluting the classpath
+    # Uses a separate classloader to avoid polluting the classpath
     # with Aether and SLF4J classes.
     #
     # @param [Array<Hash>] dependencies
@@ -79,21 +24,26 @@ module MiniAether
     # @return [Array<String>] an array of paths to artifact files
     # (likely jar files) satisfying the dependencies
     def resolve(dependencies, sources)
-      with_ruby_container do |c|
-        c.put 'path', File.dirname(__FILE__).to_java
-        c.put 'deps', Marshal.dump(dependencies).to_java
-        c.put 'repos', Marshal.dump(sources).to_java
-        files = c.runScriptlet <<-EOF
-          $LOAD_PATH.push path
-          require 'mini_aether/resolver'
-          MiniAether::Resolver.new.resolve_foreign(deps, repos)
-        EOF
-        files.map { |f| f.to_s }
+      resolver = Resolver.new
+      begin
+        resolver.resolve(dependencies, sources)
+      ensure
+        resolver.terminate
       end
     end
 
+    # Meant to be called once to resolve, possibly download, and
+    # require a set of jar dependencies.
     def setup(&block)
-      MiniAether::Spec.new(&block).require
+      resolver = Resolver.new
+      begin
+        spec = Spec.new(&block)
+        resolver.resolve(spec.dependencies, spec.sources).each do |jar|
+          require jar
+        end
+      ensure
+        resolver.terminate
+      end
     end
   end
 end

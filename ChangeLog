@@ -1,0 +1,9 @@
+Version 0.0.8    <pat@polycrystal.org>
+
+	* Refactor use of ScriptingContainer to allow long-lived Resolver
+	object.
+
+
+	* When bootstrapping, only parse ~/.m2/settings.xml once to get
+	the local repository path.
+
