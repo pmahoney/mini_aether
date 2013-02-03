@@ -3,12 +3,10 @@ require 'test_helper'
 module MiniAether
   class ResolverTest < MiniTest::Unit::TestCase
     def setup
-      MiniAether.logger.level = :warn
       @resolver = Resolver.new
     end
 
     def teardown
-      MiniAether.logger.level = :info
       @resolver.terminate
     end
 
