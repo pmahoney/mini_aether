@@ -44,6 +44,15 @@ not sure what role MiniAether will play, if any.
 At this point, all those jars and their dependencies will be loaded
 into the current JRuby.
 
+Convenience `require_aether`
+===========================
+
+An experimental convenience method, possibly best used in an `irb` session:
+
+    > require 'mini_aether/require'
+    > require_aether 'org.slf4j:slf4j-api:1.7.2'
+    > require_aether 'com.example:artifact:1.0', :source => 'http://maven.example.com/'
+
 Tests
 =====
 

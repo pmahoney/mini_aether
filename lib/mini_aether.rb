@@ -38,9 +38,7 @@ module MiniAether
       resolver = Resolver.new
       begin
         spec = Spec.new(&block)
-        resolver.resolve(spec.dependencies, spec.sources).each do |jar|
-          require jar
-        end
+        resolver.require(spec.dependencies, spec.sources)
       ensure
         resolver.terminate
       end

@@ -47,5 +47,10 @@ module MiniAether
     def resolve(dep_hashes, repos)
       @container.invoke('resolver', 'resolve', dep_hashes, repos)
     end
+
+    # Like #resolve, but requires each resulting jar file.
+    def require(deps, repos)
+      resolve(deps, repos).each {|jar| Kernel.require jar }
+    end
   end
 end
