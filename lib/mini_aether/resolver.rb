@@ -5,6 +5,9 @@ module MiniAether
   # hold Aether and various other classes used to resolve and download
   # dependencies.
   class Resolver
+    RESOLVER = '$resolver'.freeze
+    RESOLVE = 'resolve'.freeze
+
     def initialize
       @container = ScriptingContainer.new
       @container.put 'path', File.expand_path('../..', __FILE__)
@@ -19,7 +22,7 @@ module MiniAether
         MiniAether::Bootstrap.bootstrap!
 
         require 'mini_aether/resolver_impl'
-        resolver = MiniAether::ResolverImpl.new
+        #{RESOLVER} = MiniAether::ResolverImpl.new
         nil
       EOF
     end
@@ -45,7 +48,7 @@ module MiniAether
     #
     # @return [Array<String>] list of files
     def resolve(dep_hashes, repos)
-      @container.invoke('resolver', 'resolve', dep_hashes, repos)
+      @container.invoke(RESOLVER, RESOLVE, dep_hashes, repos)
     end
 
     # Like #resolve, but requires each resulting jar file.
