@@ -43,3 +43,11 @@ not sure what role MiniAether will play, if any.
 
 At this point, all those jars and their dependencies will be loaded
 into the current JRuby.
+
+Tests
+=====
+
+    rake test
+
+Note: the unit tests download artifacts from the Maven central
+repository into temp files and into `~/.m2/repository`.
