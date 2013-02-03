@@ -2,13 +2,15 @@
 # loaded into a bootstrapped environment. MiniAether::Resolver
 # prepares such an environment.
 
+require 'set'
+
 require 'mini_aether/helper'
 
 module MiniAether
   class ResolverImpl
-    include Helper
-
     MiB_PER_BYTE = 1024.0*1024.0
+
+    java_import java.lang.System
 
     java_import org.apache.maven.repository.internal.DefaultServiceLocator
     java_import org.apache.maven.repository.internal.MavenRepositorySystemSession
@@ -25,8 +27,28 @@ module MiniAether
     java_import org.sonatype.aether.util.artifact.DefaultArtifact
     java_import org.sonatype.aether.util.graph.PreorderNodeListGenerator
 
+    # for loading ~/.m2/settings.xml
+    java_import org.apache.maven.settings.building.DefaultSettingsBuilderFactory
+    java_import org.apache.maven.settings.building.DefaultSettingsBuildingRequest
+    java_import org.apache.maven.settings.building.SettingsBuildingException
+
+    DEFAULT_LOCAL_REPOSITORY =
+      File.join(System.getProperty('user.home'), '.m2', 'repository').freeze
+    DEFAULT_USER_SETTINGS =
+      File.join(System.getProperty('user.home'), '.m2', 'settings.xml').freeze
+
     # slf4j logger
     attr_reader :logger
+
+    # maven settings from settings.xml
+    attr_reader :settings
+
+    # For now, array of string repository urls.  In the future, likely
+    # Repository objects for applying additional details.
+    attr_reader :repositories
+
+    # path to local repository
+    attr_reader :local_repository
 
     def initialize
       @logger = LoggerFactory.getLogger(self.class.to_s)
@@ -42,7 +64,53 @@ module MiniAether
       locator.setServices(RepositoryConnectorFactory.java_class, *services)
 
       @system = locator.getService(RepositorySystem.java_class)
+
+      load_maven_settings!
     end
+
+    def load_maven_settings!
+      settings_builder = DefaultSettingsBuilderFactory.new.newInstance
+
+      request = DefaultSettingsBuildingRequest.new
+      if System.getProperty('maven.home')
+        global_settings = File.join(System.getProperty('maven.home'), 'conf', 'settings.xml')
+        request.setGlobalSettingsFile(Java::JavaIo::File.new(global_settings))
+        logger.debug('set global settings file to {}', global_settings)
+      end
+      request.setUserSettingsFile(Java::JavaIo::File.new(DEFAULT_USER_SETTINGS))
+      logger.debug('set user settings file to {}', DEFAULT_USER_SETTINGS)
+      request.setSystemProperties(System.getProperties)
+
+      begin
+        result = settings_builder.build(request)
+        result.getProblems.each do |prob|
+          logger.warn 'problem reading settings: {}', prob
+        end
+        @settings = result.getEffectiveSettings
+      rescue SettingsBuildingException => e
+        raise e.message
+      end
+
+      @local_repository = settings.localRepository || DEFAULT_LOCAL_REPOSITORY
+      logger.debug('using local repository {}', local_repository)
+
+      active = Set.new
+      settings.activeProfiles.each { |id| active << id }
+
+      @repositories = []
+      settings.getProfilesAsMap.each do |id, profile|
+        if active.include?(id)
+          logger.debug 'processing profile {}', id
+          profile.repositories.each do |repo|
+            # TODO: release/snapshot, various other details
+            @repositories << repo.url
+          end
+        else
+          logger.debug 'skipping inactive profile {}', id
+        end
+      end
+    end
+    private :load_maven_settings!
 
     def new_artifact(hash)
       DefaultArtifact.new(hash[:group_id],
@@ -68,7 +136,7 @@ module MiniAether
       logger.info 'resolving dependencies'
       
       session = MavenRepositorySystemSession.new
-      local_repo = LocalRepository.new(local_repository_path)
+      local_repo = LocalRepository.new(local_repository)
       local_manager = @system.newLocalRepositoryManager(local_repo)
       session.setLocalRepositoryManager(local_manager)
 
@@ -80,14 +148,17 @@ module MiniAether
         logger.debug 'requested {}', dep
       end
 
-      repos.each do |uri|
+      (self.repositories + repos).each do |uri|
         repo = RemoteRepository.new(uri.object_id.to_s, 'default', uri)
         collect_req.addRepository repo
         logger.info 'added repository {}', repo.getUrl
-        enabled = []
-        enabled << 'releases' if repo.getPolicy(false).isEnabled
-        enabled << 'snapshots' if repo.getPolicy(true).isEnabled
-        logger.debug '{}', enabled.join('+')
+
+        begin
+          enabled = []
+          enabled << 'releases' if repo.getPolicy(false).isEnabled
+          enabled << 'snapshots' if repo.getPolicy(true).isEnabled
+          logger.debug '{}', enabled.join('+')
+        end
       end
 
       node = @system.collectDependencies(session, collect_req).getRoot

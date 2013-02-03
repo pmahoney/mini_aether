@@ -2,27 +2,7 @@ require 'strscan'
 
 module MiniAether
   module Helper
-    M2_SETTINGS = File.join(ENV['HOME'], '.m2', 'settings.xml').freeze
-
-    System = Java::JavaLang::System
-
-    def local_repository_path
-      default_local_repo_path =
-        File.join(System.getProperty('user.home'), '.m2', 'repository')
-
-      if File.exists? M2_SETTINGS
-        xml = File.read M2_SETTINGS
-        begin
-          parser = XmlParser.new(xml)
-          parser.pull_to_path(:settings, :localRepository)
-          interpolate(parser.pull_text_until_end.strip)
-        rescue XmlParser::NotFoundError
-          default_local_repo_path
-        end
-      else
-        default_local_repo_path
-      end
-    end
+    java_import java.lang.System
 
     # Interpolate variables like +${user.home}+ and +${env.HOME}+ from
     # system properties and environment variables respectively.

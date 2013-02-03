@@ -4,18 +4,15 @@ require 'tmpdir'
 require 'uri'
 
 require 'mini_aether/config'
-require 'mini_aether/helper'
 require 'mini_aether/spec'
 require 'mini_aether/xml_parser'
 
 module MiniAether
   module Bootstrap
     class << self
-      include Helper
-
       def bootstrap!
         logback = false
-        root = local_repository_path
+        root = File.join(Java::JavaLang::System.getProperty('user.home'), '.m2', 'repository')
         dependencies.each do |dep|
           # means slf4j backend was not found, and we should initialize logback
           if dep[:artifact_id] == 'logback-classic'
@@ -84,7 +81,14 @@ module MiniAether
               jar 'maven-model'
               jar 'maven-model-builder'
               jar 'maven-repository-metadata'
+              jar 'maven-settings'
+              jar 'maven-settings-builder'
             end
+          end
+
+          group 'org.sonatype.plexus' do
+            jar 'plexus-sec-dispatcher:1.3'
+            jar 'plexus-cipher:1.4'
           end
 
           group 'org.codehaus.plexus' do
