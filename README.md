@@ -1,5 +1,8 @@
-MiniAether
+MiniAether [![Build Status][travis-img]][travis-ci]
 ----------
+
+[travis-img]: https://api.travis-ci.org/pmahoney/mini_aether.png
+[travis-ci]: https://travis-ci.org/pmahoney/mini_aether
 
 JRuby wrapper around some parts of
 [Aether](http://eclipse.org/aether/), the library underlying the
